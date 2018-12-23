@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>
+			Bubbles
+		</title>
+		<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+		<style type="text/css">
+			* {
+				margin: 0px;
+				padding: 0px;
+				user-select: none;
+				outline: none;
+			}
+			body {
+				width: 100%;
+				height: 100%;
+			}
+			#canvas {
+				width: 100%;
+				height: 100%;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas" width="512" height="512" onmousemove="mouseMove(event);"></canvas>
+		<script type="text/javascript">
+
+			// Set up canvas to render/display graphics on
+			canvas = document.getElementById("canvas");
+			context = canvas.getContext("2d");
+			// Set width to be equal to window width
+			context.canvas.width = window.innerWidth;
+			// Set height to be equal to window height
+			context.canvas.height = window.innerHeight;
+
+			var keyPress = function(event) {
+				if (event.key == "C") {
+					buffer.temporary = [];
+					bubbles = [];
+				}
+			}
+			document.onkeypress = keyPress;
+//how much data?
+			// Create buffer array to store information about bubbles before they are rendered
+			var buffer = {
+				temporary: [],
+				permanent: []
+			};
+			// Create bubbles array to store information about bubbles after they are rendered
+			var bubbles = [];
+			var settings = {
+				"render": {
+					"framerate": 60,
+					"speed": 0.01
+				}
+			}
+			settings.render.delay = 1000 / settings.render.framerate;
+
+			var mouseDown;
+			document.body.onmousedown = function() {
+				mouseDown = true;
+			}
+			document.body.onmouseup = function() {
+				mouseDown = false;
+			}
+			function mouseMove(event) {
+				if (mouseDown == true) {
+					var point = {
+						"position": {
+							"x": event.clientX,
+							"y": event.clientY
+						}
+					}
+					buffer.temporary.push(point);
+					buffer.permanent.push(point);
+				}
+			}
+
+			function randomItem(array) {
+				return array[Math.floor(Math.random() * array.length)];
+			}
+			function random(minimum, maximum){
+				return (Math.random() * (maximum - minimum)) + minimum;
+			}
+
+			function update() {
+				context.fillStyle = "rgba(255, 255, 255, 1)";
+				context.fillRect(0, 0, canvas.width, canvas.height);
+
+				if (buffer.temporary.length > 0) {
+					var bubbleIndex = Math.floor(Math.random() * (buffer.temporary.length / 2));
+					// Add bubble object to bubbles array - data will be filled in later
+					bubbles.push({});
+					var bubble = bubbles[bubbles.length - 1];
+
+					bubble.time = 0;
+					bubble.position = {//combine these
+						"x": {
+							"value": {
+								"base": buffer.temporary[bubbleIndex].position.x,
+								"sine": Math.random() * 20
+							},
+							"offset": Math.random() * 10,
+							"speed": Math.random() * 0.5
+						},
+						"y": {
+							"value": {
+								"base": buffer.temporary[bubbleIndex].position.y,
+								"sine": Math.random() * 20
+							},
+							"offset": Math.random() * 10,
+							"speed": Math.random() * 0.5
+						}
+					};
+					bubble.color = {
+						"hue": {
+							"value": {
+								"base": (Math.random() * 25) + 330,
+								"sine": (Math.random() * 25) + 10
+							},
+							"offset": Math.random() * 10,
+							"speed": Math.random() * 0.1
+						},
+						"saturation": {
+							"value": {
+								"base": 100,
+								"sine": 0
+							},
+							"offset": 0,
+							"speed": 0
+						},
+						"lightness": {
+							"value": {
+								"base": (Math.random() * 20) + 60,
+								"sine": (Math.random() * 10) + 10
+							},
+							"offset": Math.random() * 10,
+							"speed": Math.random() * 0.1
+						},
+						"alpha": {
+							"value": {
+								"base": (Math.random() * 0.4) + 0.2,
+								"sine": (Math.random() * 0.4) + 0.2
+							},
+							"offset": Math.random() * 10,
+							"speed": Math.random() * 0.1
+						}
+					};
+					bubble.size = {
+						"value": (Math.random() * 5) + 5,
+						"offset": Math.random() * 10,
+						"speed": Math.random() * 0.1
+					};
+
+					buffer.temporary.splice(bubbleIndex, 1);
+				}
+
+				for (var i = 0; i < bubbles.length; i ++) {
+					var bubble = bubbles[i];
+
+					for (var j = 0; j < Object.entries(bubble.color).length; j ++) {
+						var property = Object.entries(bubble.color)[j];
+						// value = base + (sine * sin((time * speed) + offset))
+						var value = property[1].value.base + (property[1].value.sine * (Math.sin((bubble.time * property[1].speed) + property[1].offset) * Math.tanh(bubble.time / 5)));
+						//eval("bubble.color." + property[0] + ".value.current = " + value);
+						eval("var " + property[0] + " = " + value);
+					}
+
+					context.fillStyle = "hsla(" + hue + ", " + saturation + "%, " + lightness + "%, " + alpha + ")";
+
+					var x = bubble.position.x.value.base + (bubble.position.x.value.sine * Math.sin((bubble.time * bubble.position.x.speed) + bubble.position.x.offset));
+					var y = bubble.position.y.value.base + (bubble.position.y.value.sine * Math.sin((bubble.time * bubble.position.y.speed) + bubble.position.y.offset));
+					var size = bubble.size.value * ((Math.sin((bubble.time * bubble.size.speed) + bubble.size.offset) + 1.5) * Math.tanh(bubble.time / 5));
+					context.beginPath();
+					context.arc(x, y, size, 0, 2 * Math.PI);
+					context.fill();
+
+					bubble.time += settings.render.speed * settings.render.delay;
+				}
+
+				if (bubbles.length > 0 && Math.random() < 0.05) {
+					var bubble = randomItem(bubbles);
+					buffer.temporary.push(
+						{
+							"position": {
+								"x": bubble.position.x.value.base + Math.floor((Math.random() * 100) - 50),
+								"y": bubble.position.y.value.base + Math.floor((Math.random() * 100) - 50)
+							}
+						}
+					);
+				}
+			}
+
+			var interval = window.setInterval(update, settings.render.delay);
+
+		</script>
+	</body>
+</html>
